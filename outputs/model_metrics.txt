@@ -1,0 +1,5 @@
+Model Performance Metrics:
+RandomForest - MAPE: 0.1231, RMSE: 11804.66
+GradientBoosting - MAPE: 0.1012, RMSE: 10084.52
+XGBoost - MAPE: 0.1656, RMSE: 15675.32
+Ensemble - MAPE: 0.1247, RMSE: 11887.38
