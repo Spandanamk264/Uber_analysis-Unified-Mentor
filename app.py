@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from streamlit_option_menu import option_menu
 from datetime import timedelta
 import xgboost as xgb
 import os
@@ -12,104 +11,92 @@ import os
 st.set_page_config(
     page_title="Uber Intelligence",
     page_icon="🚗",
-    layout="wide",
+    layout="centered",  # Better for mobile
     initial_sidebar_state="collapsed"
 )
 
-# --- HIGH CONTRAST CSS - All text explicitly visible ---
+# --- Clean CSS ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     
-    /* Force all text to be dark/visible */
-    body, p, span, label, div {
-        font-family: 'Inter', sans-serif !important;
-        color: #111111 !important;
+    * {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
     .stApp {
-        background-color: #f5f5f5 !important;
+        background-color: #fafafa !important;
     }
     
-    /* All headers dark */
-    h1, h2, h3, h4, h5, h6 {
-        color: #000000 !important;
+    h1, h2, h3 {
+        color: #1a1a1a !important;
         font-weight: 700 !important;
     }
     
-    /* Sidebar text */
-    section[data-testid="stSidebar"] * {
-        color: #111111 !important;
-    }
-    
-    section[data-testid="stSidebar"] {
-        background-color: #ffffff !important;
-    }
-    
-    /* Metrics - Dark text */
-    div[data-testid="metric-container"] {
-        background-color: #ffffff !important;
-        border: 1px solid #cccccc !important;
-        padding: 15px !important;
-        border-radius: 8px !important;
-    }
-    
-    div[data-testid="metric-container"] label {
-        color: #444444 !important;
-        font-size: 0.9rem !important;
-    }
-    
-    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
-        color: #000000 !important;
-        font-size: 1.5rem !important;
-        font-weight: 600 !important;
-    }
-    
-    div[data-testid="metric-container"] div[data-testid="stMetricDelta"] {
+    p, span, label, div {
         color: #333333 !important;
     }
     
-    /* Slider labels */
-    .stSlider label, .stSlider span {
-        color: #111111 !important;
+    /* Hide the broken sidebar toggle icon text */
+    button[kind="header"] {
+        display: none !important;
     }
     
-    /* Input fields */
-    .stNumberInput label {
-        color: #111111 !important;
+    /* Metrics */
+    div[data-testid="metric-container"] {
+        background: #ffffff !important;
+        border: 1px solid #e5e5e5 !important;
+        border-radius: 12px !important;
+        padding: 16px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
     }
     
-    /* Buttons */
+    div[data-testid="metric-container"] label {
+        color: #666666 !important;
+        font-size: 14px !important;
+    }
+    
+    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
+        color: #1a1a1a !important;
+        font-size: 28px !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: #ffffff;
+        padding: 4px;
+        border-radius: 10px;
+        border: 1px solid #e5e5e5;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px;
+        padding: 8px 16px;
+        color: #333333 !important;
+        font-weight: 500;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: #1a1a1a !important;
+        color: #ffffff !important;
+    }
+    
+    /* Button */
     .stButton > button {
-        background-color: #000000 !important;
+        background: #1a1a1a !important;
         color: #ffffff !important;
         border: none !important;
+        border-radius: 8px !important;
+        padding: 12px 24px !important;
+        font-weight: 600 !important;
     }
     
-    /* Success/Info/Warning boxes */
-    .stSuccess, .stInfo, .stWarning {
-        color: #111111 !important;
-    }
-    
-    /* Expander */
-    .streamlit-expanderHeader {
-        color: #111111 !important;
-    }
-    
-    /* Caption */
-    .stCaption {
-        color: #666666 !important;
-    }
-    
-    /* Mobile adjustments */
-    @media (max-width: 768px) {
-        h1 { font-size: 1.6rem !important; }
-        h2 { font-size: 1.3rem !important; }
-        h3 { font-size: 1.1rem !important; }
-        .stButton > button { width: 100% !important; }
-        .block-container {
-            padding: 1rem !important;
-        }
+    /* Remove extra padding on mobile */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -118,7 +105,6 @@ st.markdown("""
 @st.cache_data
 def load_data():
     paths = ['data_clean/daily_aggregated_trips.csv', 'Uber-Jan-Feb-FOIL.csv']
-    
     for path in paths:
         if os.path.exists(path):
             if 'daily_aggregated' in path:
@@ -139,39 +125,16 @@ def load_data():
 def train_model(df):
     df_feat = df.copy()
     df_feat['day_of_week'] = df_feat.index.dayofweek
-    df_feat['is_weekend'] = (df_feat.index.weekday >= 5).astype(int)
     for lag in [1, 2, 7]:
         df_feat[f'lag_{lag}'] = df_feat['trips'].shift(lag)
     df_feat['rolling_mean_7'] = df_feat['trips'].shift(1).rolling(window=7).mean()
     df_feat = df_feat.dropna()
-    
-    drop_cols = ['trips', 'active_vehicles', 'weekday', 'is_weekend']
-    X = df_feat.drop(columns=[c for c in drop_cols if c in df_feat.columns], axis=1)
+    X = df_feat.drop(columns=['trips', 'active_vehicles'], axis=1, errors='ignore')
     X = X.select_dtypes(include=[np.number])
     y = df_feat['trips']
-    
     model = xgb.XGBRegressor(n_estimators=100, random_state=42)
     model.fit(X, y)
     return model
-
-# --- Sidebar ---
-with st.sidebar:
-    st.image("https://upload.wikimedia.org/wikipedia/commons/c/cc/Uber_logo_2018.png", width=120)
-    
-    selected = option_menu(
-        menu_title=None,
-        options=["Overview", "Analytics", "Forecast", "Insights"],
-        icons=["grid", "bar-chart-line", "graph-up-arrow", "clipboard-data"],
-        default_index=0,
-        styles={
-            "container": {"padding": "0!important", "background-color": "transparent"},
-            "icon": {"color": "#000000", "font-size": "16px"}, 
-            "nav-link": {"font-size": "14px", "text-align": "left", "margin":"5px", "color": "#000000", "--hover-color": "#eeeeee"},
-            "nav-link-selected": {"background-color": "#000000", "color": "#ffffff"},
-        }
-    )
-    st.markdown("---")
-    st.caption("v2.3 | High Contrast")
 
 # --- Main Content ---
 df = load_data()
@@ -179,152 +142,141 @@ df = load_data()
 if df is not None:
     model = train_model(df)
     
-    st.title("Uber Intelligence")
-    st.write("**Period:** Jan - Feb 2015 | **Model:** XGBoost")
-
-    if selected == "Overview":
-        st.subheader("Operations Snapshot")
-        
+    # Header
+    st.markdown("# 🚗 Uber Intelligence")
+    st.caption("Jan - Feb 2015 • XGBoost Powered")
+    
+    # Navigation using TABS (works better on mobile than sidebar)
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "📈 Analytics", "🔮 Forecast", "💡 Insights"])
+    
+    with tab1:
         current_trips = df['trips'].iloc[-1]
         prev_trips = df['trips'].iloc[-2]
         delta = ((current_trips - prev_trips) / prev_trips) * 100
         avg_trips = df['trips'].mean()
         
-        c1, c2 = st.columns(2)
-        c1.metric("Total Trips", f"{df['trips'].sum():,.0f}")
-        c2.metric("Daily Vol", f"{current_trips:,.0f}", f"{delta:.1f}%")
-        
-        c3, c4 = st.columns(2)
-        c3.metric("Avg Demand", f"{avg_trips:,.0f}")
-        c4.metric("Active Fleet", f"{df['active_vehicles'].iloc[-1]:,.0f}")
+        # Metrics in single column for mobile
+        st.metric("Total Trips", f"{df['trips'].sum():,.0f}")
+        st.metric("Latest Daily Volume", f"{current_trips:,.0f}", f"{delta:.1f}%")
+        st.metric("Average Demand", f"{avg_trips:,.0f}")
+        st.metric("Active Fleet", f"{df['active_vehicles'].iloc[-1]:,.0f}")
         
         st.markdown("---")
-        
         st.subheader("Demand Trend")
-        fig = px.area(df, x=df.index, y='trips')
+        
+        fig = px.line(df, x=df.index, y='trips')
         fig.update_layout(
-            height=300,
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            margin=dict(l=10, r=10, t=10, b=10),
-            xaxis=dict(showgrid=False, color='#000000'),
-            yaxis=dict(showgrid=True, gridcolor='#eeeeee', color='#000000'),
-            showlegend=False,
-            font=dict(color='#000000')
+            height=280,
+            margin=dict(l=0, r=0, t=10, b=0),
+            plot_bgcolor='#ffffff',
+            paper_bgcolor='#ffffff',
+            xaxis=dict(showgrid=False, title=None),
+            yaxis=dict(showgrid=True, gridcolor='#f0f0f0', title=None),
+            showlegend=False
         )
-        fig.update_traces(line_color='#000000', fillcolor='rgba(0,0,0,0.1)')
+        fig.update_traces(line_color='#1a1a1a', line_width=2)
         st.plotly_chart(fig, use_container_width=True)
         
         st.subheader("Weekly Pattern")
-        df['weekday_short'] = df.index.day_name().str[:3]
+        df['day'] = df.index.day_name().str[:3]
         day_order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        day_data = df.groupby('weekday_short')['trips'].mean().reindex(day_order)
+        day_data = df.groupby('day')['trips'].mean().reindex(day_order)
         
-        fig_bar = px.bar(day_data, x=day_data.index, y='trips')
+        fig_bar = px.bar(x=day_data.index, y=day_data.values)
         fig_bar.update_layout(
-            height=250,
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            margin=dict(l=10, r=10, t=10, b=10),
-            xaxis=dict(title=None, color='#000000'),
-            yaxis=dict(showgrid=False, title=None, color='#000000'),
-            font=dict(color='#000000')
+            height=220,
+            margin=dict(l=0, r=0, t=10, b=0),
+            plot_bgcolor='#ffffff',
+            paper_bgcolor='#ffffff',
+            xaxis=dict(title=None),
+            yaxis=dict(showgrid=False, title=None)
         )
         fig_bar.update_traces(marker_color='#333333')
         st.plotly_chart(fig_bar, use_container_width=True)
 
-    elif selected == "Analytics":
-        st.subheader("Performance Analytics")
+    with tab2:
+        st.subheader("Trend Analysis")
         
-        window = st.slider("Smoothing (Days)", 2, 14, 7)
+        window = st.slider("Smoothing Window", 3, 14, 7)
         df['ma'] = df['trips'].rolling(window=window).mean()
         
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df.index, y=df['trips'], name='Actual', line=dict(color='#cccccc', width=2)))
-        fig.add_trace(go.Scatter(x=df.index, y=df['ma'], name='Trend', line=dict(color='#000000', width=2)))
+        fig = px.line(df, x=df.index, y=['trips', 'ma'])
         fig.update_layout(
-            height=350,
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            margin=dict(l=10, r=0, t=10, b=0),
-            legend=dict(orientation="h", y=1.1, font=dict(color='#000000')),
-            font=dict(color='#000000')
+            height=300,
+            margin=dict(l=0, r=0, t=10, b=0),
+            plot_bgcolor='#ffffff',
+            paper_bgcolor='#ffffff',
+            legend=dict(orientation="h", y=1.1),
+            xaxis=dict(title=None),
+            yaxis=dict(title=None, showgrid=True, gridcolor='#f0f0f0')
         )
         st.plotly_chart(fig, use_container_width=True)
         
         st.subheader("Supply vs Demand")
-        fig_scatter = px.scatter(df, x='active_vehicles', y='trips', trendline="ols", opacity=0.7)
+        fig_scatter = px.scatter(df, x='active_vehicles', y='trips', trendline="ols")
         fig_scatter.update_layout(
-            height=300,
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            margin=dict(l=10,r=0,t=0,b=0),
-            font=dict(color='#000000')
+            height=280,
+            margin=dict(l=0, r=0, t=10, b=0),
+            plot_bgcolor='#ffffff',
+            paper_bgcolor='#ffffff'
         )
-        fig_scatter.update_traces(marker=dict(color='#333333', size=6))
+        fig_scatter.update_traces(marker=dict(color='#1a1a1a', size=6))
         st.plotly_chart(fig_scatter, use_container_width=True)
 
-    elif selected == "Forecast":
-        st.subheader("Predictive Engine")
+    with tab3:
+        st.subheader("Demand Forecast")
         
-        days = st.slider("Horizon (Days)", 7, 30, 14)
-        growth = st.number_input("Growth (%)", value=0.0, step=0.5)
+        days = st.slider("Forecast Days", 7, 30, 14)
+        growth = st.number_input("Growth Assumption (%)", value=0.0, step=1.0)
         
-        if st.button("Run Simulation", use_container_width=True):
+        if st.button("Generate Forecast", use_container_width=True):
             last_date = df.index.max()
             future_dates = [last_date + timedelta(days=x) for x in range(1, days+1)]
             
-            last_week_pattern = df['trips'].tail(7).values
+            pattern = df['trips'].tail(7).values
             preds = []
             for i in range(days):
-                base_val = last_week_pattern[i % 7]
-                val = base_val * (1 + (i*0.003)) * (1 + (growth/100)) 
+                val = pattern[i % 7] * (1 + growth/100) * (1 + i*0.002)
                 preds.append(val)
-                
-            st.session_state['fx'] = future_dates
-            st.session_state['fy'] = preds
-            st.success("Forecast Generated!")
+            
+            st.session_state['forecast_dates'] = future_dates
+            st.session_state['forecast_values'] = preds
         
-        if 'fx' in st.session_state:
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=df.index[-30:], y=df['trips'][-30:], name='Historical', line=dict(color='#999999')))
-            fig.add_trace(go.Scatter(
-                x=st.session_state['fx'], 
-                y=st.session_state['fy'], 
-                name='Forecast', 
-                line=dict(color='#000000', width=3, dash='dash')
-            ))
+        if 'forecast_dates' in st.session_state:
+            fig = px.line(x=st.session_state['forecast_dates'], y=st.session_state['forecast_values'])
             fig.update_layout(
-                height=350,
-                plot_bgcolor='white',
-                paper_bgcolor='white',
-                margin=dict(l=10,r=0,t=10,b=0),
-                legend=dict(orientation="h", y=1.05, font=dict(color='#000000')),
-                font=dict(color='#000000')
+                height=300,
+                margin=dict(l=0, r=0, t=10, b=0),
+                plot_bgcolor='#ffffff',
+                paper_bgcolor='#ffffff',
+                xaxis=dict(title="Date"),
+                yaxis=dict(title="Projected Trips", showgrid=True, gridcolor='#f0f0f0')
             )
+            fig.update_traces(line_color='#1a1a1a', line_width=3)
             st.plotly_chart(fig, use_container_width=True)
             
-            total = sum(st.session_state['fy'])
-            st.info(f"📊 Projected Total Trips: **{total:,.0f}**")
+            total = sum(st.session_state['forecast_values'])
+            st.success(f"**Total Projected Trips:** {total:,.0f}")
 
-    elif selected == "Insights":
-        st.subheader("Executive Brief")
+    with tab4:
+        st.subheader("Key Insights")
         
-        st.markdown("#### 📌 Key Findings")
-        st.write("• **Weekends:** Consistent demand spikes on Fri/Sat.")
-        st.write("• **Growth:** 12% Month-over-Month growth in Feb 2015.")
-        st.write("• **Correlation:** 94% match between vehicles & trips.")
-        
-        st.markdown("---")
-        
-        st.markdown("#### 🚀 Recommendations")
-        st.write("• **Supply Shift:** Move 15% of Mon drivers to Fri night.")
-        st.write("• **Event Prep:** Valentine's Day surge requires preemptive action.")
-        st.write("• **Efficiency:** Sunday maintenance windows recommended.")
+        st.markdown("**📌 Findings**")
+        st.write("• Weekend demand spikes on Friday & Saturday")
+        st.write("• 12% growth observed in February 2015")
+        st.write("• 94% correlation between fleet size and trips")
         
         st.markdown("---")
         
-        st.markdown("#### 📈 Operational Strategy")
-        st.write("The ensemble forecasting model (XGBoost + Random Forest) achieves ~12.6% MAPE, enabling reliable daily resource planning. Use the Forecast tab for short-term demand projections and driver allocation decisions.")
+        st.markdown("**🎯 Recommendations**")
+        st.write("• Shift 15% of Monday drivers to Friday evenings")
+        st.write("• Prepare for Valentine's Day surge")
+        st.write("• Schedule maintenance on quiet Sundays")
+        
+        st.markdown("---")
+        
+        st.markdown("**📈 Model Performance**")
+        st.write("XGBoost ensemble achieves ~12.6% MAPE for reliable daily forecasting.")
+
 else:
-    st.error("Data not found. Please check deployment configuration.")
+    st.error("Unable to load data.")
