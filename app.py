@@ -16,77 +16,100 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- Mobile-Responsive & Professional UI Design ---
+# --- HIGH CONTRAST CSS - All text explicitly visible ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
     
-    body {
-        font-family: 'Inter', sans-serif;
-        background-color: #f8f9fa;
-        color: #333;
+    /* Force all text to be dark/visible */
+    body, p, span, label, div {
+        font-family: 'Inter', sans-serif !important;
+        color: #111111 !important;
     }
     
     .stApp {
-        background-color: #f8f9fa;
+        background-color: #f5f5f5 !important;
     }
     
-    h1 {
-        font-family: 'Inter', sans-serif;
-        font-weight: 700;
-        color: #111;
-        font-size: 2.2rem;
-    }
-    h2, h3 {
-        font-weight: 600;
-        color: #111;
+    /* All headers dark */
+    h1, h2, h3, h4, h5, h6 {
+        color: #000000 !important;
+        font-weight: 700 !important;
     }
     
-    @media (max-width: 768px) {
-        h1 { font-size: 1.8rem; }
-        h2 { font-size: 1.4rem; }
-        h3 { font-size: 1.2rem; }
-        .stButton > button { width: 100%; }
-        .block-container {
-            padding-top: 2rem !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-        }
-    }
-    
-    div[data-testid="metric-container"] {
-        background-color: #ffffff;
-        border: 1px solid #e0e0e0;
-        padding: 15px;
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        text-align: center;
-    }
-    
-    div[data-testid="metric-container"] label {
-        font-size: 0.9rem;
-        color: #666;
-    }
-    
-    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
-        font-size: 1.5rem;
-        color: #111;
-    }
-    
-    .stDataFrame {
-        background-color: #ffffff;
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    
-    hr {
-        margin: 1.5rem 0;
-        border-top: 1px solid #e0e0e0;
+    /* Sidebar text */
+    section[data-testid="stSidebar"] * {
+        color: #111111 !important;
     }
     
     section[data-testid="stSidebar"] {
-        background-color: #ffffff;
-        border-right: 1px solid #e0e0e0;
+        background-color: #ffffff !important;
+    }
+    
+    /* Metrics - Dark text */
+    div[data-testid="metric-container"] {
+        background-color: #ffffff !important;
+        border: 1px solid #cccccc !important;
+        padding: 15px !important;
+        border-radius: 8px !important;
+    }
+    
+    div[data-testid="metric-container"] label {
+        color: #444444 !important;
+        font-size: 0.9rem !important;
+    }
+    
+    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
+        color: #000000 !important;
+        font-size: 1.5rem !important;
+        font-weight: 600 !important;
+    }
+    
+    div[data-testid="metric-container"] div[data-testid="stMetricDelta"] {
+        color: #333333 !important;
+    }
+    
+    /* Slider labels */
+    .stSlider label, .stSlider span {
+        color: #111111 !important;
+    }
+    
+    /* Input fields */
+    .stNumberInput label {
+        color: #111111 !important;
+    }
+    
+    /* Buttons */
+    .stButton > button {
+        background-color: #000000 !important;
+        color: #ffffff !important;
+        border: none !important;
+    }
+    
+    /* Success/Info/Warning boxes */
+    .stSuccess, .stInfo, .stWarning {
+        color: #111111 !important;
+    }
+    
+    /* Expander */
+    .streamlit-expanderHeader {
+        color: #111111 !important;
+    }
+    
+    /* Caption */
+    .stCaption {
+        color: #666666 !important;
+    }
+    
+    /* Mobile adjustments */
+    @media (max-width: 768px) {
+        h1 { font-size: 1.6rem !important; }
+        h2 { font-size: 1.3rem !important; }
+        h3 { font-size: 1.1rem !important; }
+        .stButton > button { width: 100% !important; }
+        .block-container {
+            padding: 1rem !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -94,7 +117,6 @@ st.markdown("""
 # --- Helper Functions ---
 @st.cache_data
 def load_data():
-    # Check multiple possible paths for cloud vs local
     paths = ['data_clean/daily_aggregated_trips.csv', 'Uber-Jan-Feb-FOIL.csv']
     
     for path in paths:
@@ -105,14 +127,12 @@ def load_data():
                 df.set_index('date', inplace=True)
                 return df
             else:
-                # Raw file - process it
                 df_raw = pd.read_csv(path)
                 df_raw['date'] = pd.to_datetime(df_raw['date'])
                 df_raw = df_raw.sort_values('date')
                 daily_df = df_raw.groupby('date')[['trips', 'active_vehicles']].sum().reset_index()
                 daily_df.set_index('date', inplace=True)
                 return daily_df
-    
     return None
 
 @st.cache_resource
@@ -145,13 +165,13 @@ with st.sidebar:
         default_index=0,
         styles={
             "container": {"padding": "0!important", "background-color": "transparent"},
-            "icon": {"color": "#333", "font-size": "16px"}, 
-            "nav-link": {"font-size": "14px", "text-align": "left", "margin":"5px", "color": "#333", "--hover-color": "#f0f2f6"},
-            "nav-link-selected": {"background-color": "#000", "color": "#fff"},
+            "icon": {"color": "#000000", "font-size": "16px"}, 
+            "nav-link": {"font-size": "14px", "text-align": "left", "margin":"5px", "color": "#000000", "--hover-color": "#eeeeee"},
+            "nav-link-selected": {"background-color": "#000000", "color": "#ffffff"},
         }
     )
     st.markdown("---")
-    st.caption("v2.2 | Mobile-Optimized")
+    st.caption("v2.3 | High Contrast")
 
 # --- Main Content ---
 df = load_data()
@@ -160,7 +180,7 @@ if df is not None:
     model = train_model(df)
     
     st.title("Uber Intelligence")
-    st.markdown(f"**Period:** Jan - Feb 2015 | **Model:** XGBoost")
+    st.write("**Period:** Jan - Feb 2015 | **Model:** XGBoost")
 
     if selected == "Overview":
         st.subheader("Operations Snapshot")
@@ -187,9 +207,10 @@ if df is not None:
             plot_bgcolor='white',
             paper_bgcolor='white',
             margin=dict(l=10, r=10, t=10, b=10),
-            xaxis=dict(showgrid=False),
-            yaxis=dict(showgrid=True, gridcolor='#f0f0f0'),
-            showlegend=False
+            xaxis=dict(showgrid=False, color='#000000'),
+            yaxis=dict(showgrid=True, gridcolor='#eeeeee', color='#000000'),
+            showlegend=False,
+            font=dict(color='#000000')
         )
         fig.update_traces(line_color='#000000', fillcolor='rgba(0,0,0,0.1)')
         st.plotly_chart(fig, use_container_width=True)
@@ -203,11 +224,13 @@ if df is not None:
         fig_bar.update_layout(
             height=250,
             plot_bgcolor='white',
+            paper_bgcolor='white',
             margin=dict(l=10, r=10, t=10, b=10),
-            xaxis=dict(title=None),
-            yaxis=dict(showgrid=False, title=None)
+            xaxis=dict(title=None, color='#000000'),
+            yaxis=dict(showgrid=False, title=None, color='#000000'),
+            font=dict(color='#000000')
         )
-        fig_bar.update_traces(marker_color='#333')
+        fig_bar.update_traces(marker_color='#333333')
         st.plotly_chart(fig_bar, use_container_width=True)
 
     elif selected == "Analytics":
@@ -217,13 +240,15 @@ if df is not None:
         df['ma'] = df['trips'].rolling(window=window).mean()
         
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df.index, y=df['trips'], name='Actual', line=dict(color='#e0e0e0', width=2)))
-        fig.add_trace(go.Scatter(x=df.index, y=df['ma'], name='Trend', line=dict(color='#000', width=2)))
+        fig.add_trace(go.Scatter(x=df.index, y=df['trips'], name='Actual', line=dict(color='#cccccc', width=2)))
+        fig.add_trace(go.Scatter(x=df.index, y=df['ma'], name='Trend', line=dict(color='#000000', width=2)))
         fig.update_layout(
             height=350,
-            plot_bgcolor='white', 
+            plot_bgcolor='white',
+            paper_bgcolor='white',
             margin=dict(l=10, r=0, t=10, b=0),
-            legend=dict(orientation="h", y=1.1)
+            legend=dict(orientation="h", y=1.1, font=dict(color='#000000')),
+            font=dict(color='#000000')
         )
         st.plotly_chart(fig, use_container_width=True)
         
@@ -231,10 +256,12 @@ if df is not None:
         fig_scatter = px.scatter(df, x='active_vehicles', y='trips', trendline="ols", opacity=0.7)
         fig_scatter.update_layout(
             height=300,
-            plot_bgcolor='white', 
-            margin=dict(l=10,r=0,t=0,b=0)
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            margin=dict(l=10,r=0,t=0,b=0),
+            font=dict(color='#000000')
         )
-        fig_scatter.update_traces(marker=dict(color='#333', size=6))
+        fig_scatter.update_traces(marker=dict(color='#333333', size=6))
         st.plotly_chart(fig_scatter, use_container_width=True)
 
     elif selected == "Forecast":
@@ -247,7 +274,6 @@ if df is not None:
             last_date = df.index.max()
             future_dates = [last_date + timedelta(days=x) for x in range(1, days+1)]
             
-            # Use last week pattern from actual data (always available)
             last_week_pattern = df['trips'].tail(7).values
             preds = []
             for i in range(days):
@@ -261,18 +287,20 @@ if df is not None:
         
         if 'fx' in st.session_state:
             fig = go.Figure()
-            fig.add_trace(go.Scatter(x=df.index[-30:], y=df['trips'][-30:], name='Historical', line=dict(color='#999')))
+            fig.add_trace(go.Scatter(x=df.index[-30:], y=df['trips'][-30:], name='Historical', line=dict(color='#999999')))
             fig.add_trace(go.Scatter(
                 x=st.session_state['fx'], 
                 y=st.session_state['fy'], 
                 name='Forecast', 
-                line=dict(color='#000', width=3, dash='dash')
+                line=dict(color='#000000', width=3, dash='dash')
             ))
             fig.update_layout(
                 height=350,
-                plot_bgcolor='white', 
+                plot_bgcolor='white',
+                paper_bgcolor='white',
                 margin=dict(l=10,r=0,t=10,b=0),
-                legend=dict(orientation="h", y=1.05)
+                legend=dict(orientation="h", y=1.05, font=dict(color='#000000')),
+                font=dict(color='#000000')
             )
             st.plotly_chart(fig, use_container_width=True)
             
@@ -282,33 +310,21 @@ if df is not None:
     elif selected == "Insights":
         st.subheader("Executive Brief")
         
-        st.markdown("""
-        <div style="padding:15px; background-color:white; border-radius:8px; border:1px solid #ddd; margin-bottom:10px;">
-            <h4 style="margin:0">📌 Key Findings</h4>
-            <ul style="padding-left:20px; margin-top:5px; color:#444;">
-                <li><strong>Weekends:</strong> Consistent demand spikes on Fri/Sat.</li>
-                <li><strong>Growth:</strong> 12% Month-over-Month growth in Feb 2015.</li>
-                <li><strong>Correlation:</strong> 94% match between vehicles & trips.</li>
-            </ul>
-        </div>
+        st.markdown("#### 📌 Key Findings")
+        st.write("• **Weekends:** Consistent demand spikes on Fri/Sat.")
+        st.write("• **Growth:** 12% Month-over-Month growth in Feb 2015.")
+        st.write("• **Correlation:** 94% match between vehicles & trips.")
         
-        <div style="padding:15px; background-color:white; border-radius:8px; border:1px solid #ddd; margin-bottom:10px;">
-            <h4 style="margin:0">🚀 Recommendations</h4>
-            <ul style="padding-left:20px; margin-top:5px; color:#444;">
-                <li><strong>Supply Shift:</strong> Move 15% of Mon drivers to Fri night.</li>
-                <li><strong>Event Prep:</strong> Valentine's Day surge requires preemptive action.</li>
-                <li><strong>Efficiency:</strong> Sunday maintenance windows recommended.</li>
-            </ul>
-        </div>
+        st.markdown("---")
         
-        <div style="padding:15px; background-color:white; border-radius:8px; border:1px solid #ddd;">
-            <h4 style="margin:0">📈 Operational Strategy</h4>
-            <p style="margin-top:5px; color:#444;">
-                The ensemble forecasting model (XGBoost + Random Forest) achieves ~12.6% MAPE, 
-                enabling reliable daily resource planning. Use the Forecast tab for short-term 
-                demand projections and driver allocation decisions.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("#### 🚀 Recommendations")
+        st.write("• **Supply Shift:** Move 15% of Mon drivers to Fri night.")
+        st.write("• **Event Prep:** Valentine's Day surge requires preemptive action.")
+        st.write("• **Efficiency:** Sunday maintenance windows recommended.")
+        
+        st.markdown("---")
+        
+        st.markdown("#### 📈 Operational Strategy")
+        st.write("The ensemble forecasting model (XGBoost + Random Forest) achieves ~12.6% MAPE, enabling reliable daily resource planning. Use the Forecast tab for short-term demand projections and driver allocation decisions.")
 else:
     st.error("Data not found. Please check deployment configuration.")
